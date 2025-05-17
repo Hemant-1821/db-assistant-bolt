@@ -1,0 +1,24 @@
+{
+  "name": "db-assistant-bolt",
+  "version": "1.0.0",
+  "description": "Backend bolt js application to handle slack bot messaging",
+  "main": "app.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "npx nodemon"
+  },
+  "author": "Hemant-1821",
+  "license": "ISC",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.51.0",
+    "@modelcontextprotocol/sdk": "^1.11.4",
+    "@slack/bolt": "^4.3.0",
+    "dotenv": "^16.5.0",
+    "nodemon": "^3.1.10"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.18",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3"
+  }
+}
