@@ -44,25 +44,34 @@ server.tool(
   - queryObject: An optional query object to filter the results (default: give top 5 entries from the collection and let user know that prompt is too generic)
   - limit: An optional limit on the number of results to return (default: 5)
   - sort: An optional sort object to sort the results (default: no sorting)
+  - project: An optional projection object to specify which fields to return
 
   Returns a list of collection names in the specified database. If no collections are found, returns a message indicating that.`,
-
   {
     dbName: z.string(),
     collectionName: z.string(),
     queryObject: z.object({}),
     limit: z.number().optional(),
     sort: z.object({}).optional(),
+    project: z.object({}).optional(),
   },
-  async ({ dbName, collectionName, queryObject, limit, sort }) => {
-    console.log("params", { dbName, collectionName, queryObject, limit, sort });
+  async ({ dbName, collectionName, queryObject, limit, sort, project }) => {
+    console.log("params", {
+      dbName,
+      collectionName,
+      queryObject,
+      limit,
+      sort,
+      project,
+    });
     try {
       const result = await client
         .db(dbName || "sample_mflix")
         .collection(collectionName || "movies")
         .find(queryObject || {})
         .limit(limit || 5)
-        .sort(sort || {});
+        .sort(sort || {})
+        .project(project || {});
 
       return {
         content: [

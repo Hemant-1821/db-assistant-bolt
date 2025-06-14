@@ -16,10 +16,12 @@ const mcpClient = new MCPClient();
 
 app.message(async (props: any) => {
   const { message, say, client } = props;
-  if (!message || !message.text) {
-    app.logger.error("Invalid message format", message);
-    await say("Invalid message format. Please try again.");
-    return;
+  if (
+    message.subtype === "bot_message" ||
+    !("text" in message) ||
+    typeof message.text !== "string"
+  ) {
+    return; // silently ignore
   }
 
   if (!isDbRelatedMessage(message.text)) {
@@ -39,8 +41,48 @@ app.message(async (props: any) => {
     channel: message.channel,
     ts: result.ts,
   });
+  console.log("MCP response:", mcpMessage);
   await say(mcpMessage);
-  return;
+});
+
+app.command("/clearbotchat", async ({ command, ack, client, respond }: any) => {
+  await ack();
+
+  const channelId = command.channel_id;
+  const countToDelete = parseInt(command.text) || 20;
+
+  try {
+    // Fetch last messages from the channel
+    const history = await client.conversations.history({
+      channel: channelId,
+      limit: 100,
+    });
+
+    if (!history.messages) {
+      await respond("Couldn't fetch messages.");
+      return;
+    }
+
+    const botUserId = (await client.auth.test()).user_id;
+    const botMessages = history.messages
+      .filter((msg: any) => msg.user === botUserId && !msg.subtype)
+      .slice(0, countToDelete);
+
+    let deletedCount = 0;
+
+    for (const msg of botMessages) {
+      await client.chat.delete({
+        channel: channelId,
+        ts: msg.ts!,
+      });
+      deletedCount++;
+    }
+
+    await respond(`✅ Cleared ${deletedCount} message(s) posted by the bot.`);
+  } catch (error) {
+    console.error("Error clearing chat:", error);
+    await respond("❌ Failed to clear messages.");
+  }
 });
 
 (async () => {
