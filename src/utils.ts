@@ -1,6 +1,6 @@
-import { dbPatterns } from "./constants";
+import { dbKeywords } from "./constants";
 
 export function isDbRelatedMessage(msg: string): boolean {
   const lower = msg.toLowerCase();
-  return dbPatterns.some((pattern) => pattern.test(lower));
+  return dbKeywords.some((keyword) => lower.includes(keyword));
 }

@@ -6,6 +6,7 @@ import type {
 
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import { systemPrompt } from "./constants";
 
 require("dotenv").config();
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
@@ -82,6 +83,7 @@ export default class MCPClient {
       max_tokens: 1000,
       messages,
       tools: this.tools,
+      system: systemPrompt,
     });
 
     // Process response and handle tool calls
@@ -101,9 +103,11 @@ export default class MCPClient {
           arguments: toolArgs,
         });
         toolResults.push(result);
-        finalText.push(
+        console.log(
           `[Calling tool ${toolName} with args ${JSON.stringify(toolArgs)}]`
         );
+
+        console.log("Results from tool:", toolName, "---->", result);
 
         // Continue conversation with tool results
         messages.push({
@@ -116,6 +120,7 @@ export default class MCPClient {
           model: "claude-3-5-sonnet-20241022",
           max_tokens: 1000,
           messages,
+          system: systemPrompt,
         });
 
         finalText.push(

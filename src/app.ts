@@ -13,31 +13,43 @@ const app = new App({
 
 // MCP client initialization
 const mcpClient = new MCPClient();
-mcpClient.connectToServer("./dist/mcp-server.js");
 
-app.message(async ({ message, say }: messageProp) => {
-  console.log("Received message:", message.text);
-  if (!isDbRelatedMessage(message.text)) return; // Future enhancement: Add a NLP model to detect DB-related messages (Combine with NLP)
+app.message(async (props: any) => {
+  const { message, say, client } = props;
+  if (!message || !message.text) {
+    app.logger.error("Invalid message format", message);
+    await say("Invalid message format. Please try again.");
+    return;
+  }
 
-  // const response = await processWithClaude(message.text);
-  await say(`your message is related to DB - ${message.text}`);
+  if (!isDbRelatedMessage(message.text)) {
+    await say(
+      "I didn’t understand that as a DB operation. Try commands like:\n• Get all users from the last 30 days\n• Insert a new record into the orders table"
+    );
+    return;
+  }
+
+  const result = await client.chat.postMessage({
+    text: "Thinking...",
+    channel: message.channel,
+  });
+  // Process the message with MCP client
+  const mcpMessage = await mcpClient.processQuery(message.text);
+  await client.chat.delete({
+    channel: message.channel,
+    ts: result.ts,
+  });
+  await say(mcpMessage);
+  return;
 });
-
-// default message:
-// I didn’t understand that as a DB operation. Try commands like:
-// • Get all users from the last 30 days
-// • Insert a new record into the orders table
 
 (async () => {
   try {
     // Start your bolt app
     await app.start(process.env.PORT || 3000);
     app.logger.info("⚡️ Bolt app is running!");
-    // console.log(
-    //   await mcpClient.processQuery(
-    //     "What will be the weather in indore at 8 pm ist?"
-    //   )
-    // );
+    // Connect to mcp server
+    mcpClient.connectToServer("./dist/mcp-server.js");
   } catch (e) {
     app.logger.error(e);
     await mcpClient.cleanup();
