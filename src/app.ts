@@ -24,13 +24,6 @@ app.message(async (props: any) => {
     return; // silently ignore
   }
 
-  if (!isDbRelatedMessage(message.text)) {
-    await say(
-      "I didn’t understand that as a DB operation. Try commands like:\n• Get all users from the last 30 days\n• Insert a new record into the orders table"
-    );
-    return;
-  }
-
   const result = await client.chat.postMessage({
     text: "Thinking...",
     channel: message.channel,
