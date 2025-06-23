@@ -15,7 +15,7 @@ const app = new App({
 const mcpClient = new MCPClient();
 
 app.message(async (props: any) => {
-  const { message, say, client } = props;
+  const { message, say, client, context } = props;
   if (
     message.subtype === "bot_message" ||
     !("text" in message) ||
@@ -36,7 +36,7 @@ app.message(async (props: any) => {
     channel: message.channel,
   });
   // Process the message with MCP client
-  const mcpMessage = await mcpClient.processQuery(message.text);
+  const mcpMessage = await mcpClient.processQuery(message.text, context.userId);
   await client.chat.delete({
     channel: message.channel,
     ts: result.ts,

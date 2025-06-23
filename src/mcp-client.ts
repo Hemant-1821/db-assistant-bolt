@@ -7,6 +7,10 @@ import type {
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { systemPrompt } from "./constants";
+import {
+  fetchConversationHistory,
+  updateConversationHistory,
+} from "./mcp-server";
 
 require("dotenv").config();
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
@@ -63,14 +67,18 @@ export default class MCPClient {
     }
   }
 
-  async processQuery(query: string) {
+  async processQuery(query: string, userId: string) {
     /**
      * Process a query using Claude and available tools
      *
      * @param query - The user's input query
      * @returns Processed response as a string
      */
+
+    const history = await fetchConversationHistory(userId);
+
     const messages: MessageParam[] = [
+      ...history,
       {
         role: "user",
         content: query,
@@ -91,6 +99,7 @@ export default class MCPClient {
     const toolResults = [];
 
     for (const content of response.content) {
+      console.log("Content:", content);
       if (content.type === "text") {
         finalText.push(content.text);
       } else if (content.type === "tool_use") {
@@ -128,6 +137,20 @@ export default class MCPClient {
         );
       }
     }
+
+    const chat = [
+      ...history.slice(-8), // keeping last 8 messages pair for context and make bot stateful
+      {
+        role: "user",
+        content: query,
+      },
+      {
+        role: "assistant",
+        content: finalText.join("\n"),
+      },
+    ];
+    console.log("Chat", chat);
+    await updateConversationHistory(userId, chat);
 
     return finalText.join("\n");
   }

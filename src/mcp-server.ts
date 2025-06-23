@@ -97,11 +97,43 @@ server.tool(
   }
 );
 
+export const fetchConversationHistory = async (userId: string) => {
+  try {
+    const history = await client
+      .db("chat")
+      .collection("conversation_history")
+      .find({ userId })
+      .sort({ timestamp: -1 })
+      .limit(100)
+      .toArray();
+
+    console.log("Conversation history fetched for user:", history);
+    return history[0].chat || [];
+  } catch (error) {
+    console.error("Error fetching conversation history:", error);
+    return [];
+  }
+};
+
+export const updateConversationHistory = async (
+  userId: string,
+  chat: { role: string; content: string }[]
+) => {
+  try {
+    await client
+      .db("chat")
+      .collection("conversation_history")
+      .insertOne({ userId, chat, timestamp: new Date() });
+  } catch (error) {
+    console.error("Error updating conversation history:", error);
+  }
+};
+
 // Start the server
 async function mcpServer() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error("Weather MCP Server running on stdio");
+  console.error("MCP Server running on stdio");
   // Connect to MongoDB
   await client.connect();
   // Send a ping to confirm a successful connection
