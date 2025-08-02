@@ -23,6 +23,7 @@ A Slack bot that allows users to query a MongoDB database using **natural langua
 ## 🎯 Upcoming Features
 
 - Add **join support** between collections
+- Use **Langchain** instead of anthropic library for handling tools and LLM connection  
 
 ## 📸 Demo
 
