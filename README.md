@@ -11,6 +11,8 @@ A Slack bot that allows users to query a MongoDB database using **natural langua
   - Filtering rows
   - Sorting by fields
 - Uses Anthropic Claude via SDK for language understanding
+- Allow users to **select DB** using /selectdb command
+- **stateful** bot — follow-up queries supported (e.g., “Now sort by price”)
 
 ## 🧰 Tech Stack
 
@@ -20,10 +22,7 @@ A Slack bot that allows users to query a MongoDB database using **natural langua
 
 ## 🎯 Upcoming Features
 
-- Make the bot **stateful** — enable follow-up queries (e.g., “Now sort by price”)
 - Add **join support** between collections
-- Allow users to **select DB once per session**
-- Improve response formatting & summaries
 
 ## 📸 Demo
 
