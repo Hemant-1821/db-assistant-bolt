@@ -123,10 +123,36 @@ export const updateConversationHistory = async (
     await client
       .db("chat")
       .collection("conversation_history")
-      .insertOne({ userId, chat, timestamp: new Date() });
+      .updateOne(
+        { userId },
+        { $set: { userId, chat, timestamp: new Date() } },
+        { upsert: true }
+      );
   } catch (error) {
     console.error("Error updating conversation history:", error);
   }
+};
+
+export const selectDb = async (dbName: string, userId: string) => {
+  const adminDb = client.db("admin");
+  const result = await adminDb.command({ listDatabases: 1, nameOnly: true });
+  const dbNames = result.databases.map((dbInfo: { name: string }) => {
+    return dbInfo.name;
+  });
+
+  if (dbNames.includes(dbName)) {
+    // save db name to chat table
+    return await client
+      .db("chat")
+      .collection("settings")
+      .updateOne(
+        { userId },
+        { $set: { userId, selectedDb: dbName, timestamp: new Date() } },
+        { upsert: true }
+      );
+  }
+
+  throw new Error(`Invalid DB name. Available DBs: ${dbNames.join(", ")}`);
 };
 
 // Start the server

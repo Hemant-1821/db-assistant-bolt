@@ -1,7 +1,5 @@
-import { messageProp } from "./Types";
 import MCPClient from "./mcp-client";
-import { isDbRelatedMessage } from "./utils";
-
+import { selectDb } from "./mcp-server";
 const { App } = require("@slack/bolt");
 require("dotenv").config();
 
@@ -77,6 +75,32 @@ app.command("/clearbotchat", async ({ command, ack, client, respond }: any) => {
     await respond("❌ Failed to clear messages.");
   }
 });
+
+app.command(
+  "/selectdb",
+  async ({ command, ack, respond, context, client }: any) => {
+    const dbName = command.text.trim();
+    const channelId = command.channel_id;
+
+    if (!dbName) {
+      await respond(
+        "❌ invalid db name. Please mention just the db name after the slash command"
+      );
+    }
+    try {
+      await selectDb(dbName, context.userId);
+      await respond("DB Selection successfully saved.");
+      await client.conversations.setTopic({
+        channel: channelId,
+        topic: `Selected DB: ${dbName}`,
+      });
+    } catch (e: any) {
+      console.error(e);
+      await respond(`An error occurred: ${e.message}`);
+    }
+    await ack();
+  }
+);
 
 (async () => {
   try {
