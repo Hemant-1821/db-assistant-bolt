@@ -1,6 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
+import { getSchemaStructure } from "./utils";
 const { MongoClient, ServerApiVersion } = require("mongodb");
 require("dotenv").config();
 
@@ -20,10 +21,10 @@ const server = new McpServer({
 });
 
 server.tool(
-  "default-tool",
+  "defaultTool",
   "If there's no specific tool for the request, use this tool to handle general queries. Do not answer from memory or guess.",
   {},
-  async () => {
+  () => {
     return {
       content: [
         {
@@ -36,8 +37,42 @@ server.tool(
 );
 
 server.tool(
-  "ReadFromDatabase",
-  `If someone asks for the list of collections or tables in the database, use this tool to fetch them. Do not answer from memory.
+  "getSelectedDatabase",
+  "Tool to get the name of the DB selected by the user",
+  { userId: z.string() },
+  async ({ userId }) => {
+    if (!userId) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: "Please provide userId",
+          },
+        ],
+      };
+    }
+    const userSettings = await client
+      .db("chat")
+      .collection("settings")
+      .findOne({ userId });
+
+    const dbName = userSettings?.selectedDb;
+    return {
+      content: [
+        {
+          type: "text",
+          text: dbName
+            ? `Name of the db selected by user: ${dbName}`
+            : `User doesn't have any db selected, ask user for the db name if it's is not provided in the user query. Do not assume it or use default as it might not generate expected results for the user`,
+        },
+      ],
+    };
+  }
+);
+
+server.tool(
+  "readFromDatabase",
+  `If user asks to fetch data from a collection or table, use this tool to fetch them. Do not answer from memory.
   Params:
   - dbName: The name of the database to query (default: "sample_mflix")
   - collectionName: The name of the collection to query (default: "movies")
@@ -56,14 +91,6 @@ server.tool(
     project: z.object({}).optional(),
   },
   async ({ dbName, collectionName, queryObject, limit, sort, project }) => {
-    console.log("params", {
-      dbName,
-      collectionName,
-      queryObject,
-      limit,
-      sort,
-      project,
-    });
     try {
       const result = await client
         .db(dbName || "sample_mflix")
@@ -71,20 +98,138 @@ server.tool(
         .find(queryObject || {})
         .limit(limit || 5)
         .sort(sort || {})
-        .project(project || {});
+        .project(project || {})
+        .toArray();
 
       return {
         content: [
           {
             type: "text",
             text:
-              result.toString() ||
+              JSON.stringify(result, null, 2) ||
               "No result found. Try again with a more specific query.",
           },
         ],
       };
     } catch (error) {
-      console.error("Error retrieving collections:", error);
+      return {
+        content: [
+          {
+            type: "text",
+            text: "Failed to retrieve data from the database.",
+          },
+        ],
+      };
+    }
+  }
+);
+
+server.tool(
+  "tableJoin",
+  `Tool that should be used to get data from join of two table`,
+  {
+    dbName: z.string(),
+    tableName: z.string(),
+    localField: z.string(),
+    foreignTableName: z.string(),
+    foreignColumnName: z.string(),
+    newFieldName: z.string(),
+    limit: z.number(),
+  },
+  async ({
+    dbName,
+    tableName,
+    localField,
+    foreignTableName,
+    foreignColumnName,
+    newFieldName,
+    limit,
+  }) => {
+    try {
+      const pipeline = [
+        { $limit: limit || 2 },
+        {
+          $lookup: {
+            localField,
+            from: foreignTableName, // The collection to join from
+            foreignField: foreignColumnName, // Field in the foreign collection
+            as: newFieldName, // Name of the new array field to store matched documents
+          },
+        },
+      ];
+
+      const result = await client
+        .db(dbName)
+        .collection(tableName)
+        .aggregate(pipeline)
+        .toArray();
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Aggregated data: ${JSON.stringify(result)}`,
+          },
+        ],
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: "Failed to retrieve collections from the database.",
+          },
+        ],
+      };
+    }
+  }
+);
+
+server.tool(
+  "tableSchema",
+  "Tool that fetches schema structure of a particular table. expected parameters - table name and db name in which table is present",
+  { tableName: z.string(), dbName: z.string() },
+  async ({ tableName, dbName }) => {
+    try {
+      if (!tableName)
+        return {
+          content: [
+            {
+              type: "text",
+              text: "Failed to retrieve collections from the database. Table name not provided.",
+            },
+          ],
+        };
+
+      if (!dbName)
+        return {
+          content: [
+            {
+              type: "text",
+              text: "Failed to retrieve collections from the database. Table name not provided.",
+            },
+          ],
+        };
+
+      const result = await client
+        .db(dbName)
+        .collection(tableName)
+        .find({})
+        .limit(1) // Assuming every object has definite structure for now
+        .toArray();
+
+      const schema = getSchemaStructure(result[0]);
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Schema definition for the table ${tableName}: 
+          ${JSON.stringify(schema)}
+          `,
+          },
+        ],
+      };
+    } catch (error) {
       return {
         content: [
           {
@@ -106,8 +251,6 @@ export const fetchConversationHistory = async (userId: string) => {
       .sort({ timestamp: -1 })
       .limit(100)
       .toArray();
-
-    console.log("Conversation history fetched for user:", history);
     return history[0].chat || [];
   } catch (error) {
     console.error("Error fetching conversation history:", error);

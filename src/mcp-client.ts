@@ -2,6 +2,7 @@ import { Anthropic } from "@anthropic-ai/sdk";
 import type {
   MessageParam,
   Tool,
+  ToolResultBlockParam,
 } from "@anthropic-ai/sdk/resources/messages/messages.js";
 
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
@@ -67,6 +68,83 @@ export default class MCPClient {
     }
   }
 
+  async getLlmResponse(
+    userId: string,
+    messages: MessageParam[]
+  ): Promise<string> {
+    const extendedMessages = [...messages];
+
+    const response = await this.anthropic.messages.create({
+      model: "claude-3-5-sonnet-20241022",
+      max_tokens: 1000,
+      messages: extendedMessages,
+      tools: this.tools,
+      system: systemPrompt,
+    });
+
+    let textFromClaude = "";
+    let toolUsed = false;
+
+    extendedMessages.push({
+      role: "assistant",
+      content: response.content,
+    });
+
+    for (const content of response.content) {
+      if (content.type === "text") {
+        textFromClaude = content.text;
+      } else if (content.type === "tool_use") {
+        toolUsed = true;
+        // Execute tool call
+        const toolName = content.name;
+        const toolArgs = content.input as { [x: string]: unknown } | undefined;
+
+        // Add userId to tool arguments
+        const enrichedToolArgs = {
+          ...toolArgs,
+          userId, // Pass userId to all tool calls
+        };
+
+        const result = (await this.mcp.callTool({
+          name: toolName,
+          arguments: enrichedToolArgs,
+        })) as unknown as ToolResultBlockParam; // Bug from library
+
+        console.log(
+          `[Calling tool ${toolName} with args ${JSON.stringify(
+            enrichedToolArgs
+          )}]`
+        );
+
+        console.log("Results from tool:", toolName, "---->", result);
+
+        let toolResponse = "";
+        if (result.content && typeof result.content === "object")
+          result.content.forEach((ele) => {
+            if (ele.type === "text") {
+              toolResponse = ele.text;
+            }
+          });
+
+        // Continue conversation with tool results
+        extendedMessages.push({
+          role: "user",
+          content: [
+            {
+              type: "tool_result",
+              tool_use_id: content.id,
+              content: toolResponse,
+            },
+          ],
+        });
+      }
+    }
+
+    if (!toolUsed) return textFromClaude;
+
+    return this.getLlmResponse(userId, extendedMessages);
+  }
+
   async processQuery(query: string, userId: string) {
     /**
      * Process a query using Claude and available tools
@@ -85,58 +163,7 @@ export default class MCPClient {
       },
     ];
 
-    // Initial Claude API call
-    const response = await this.anthropic.messages.create({
-      model: "claude-3-5-sonnet-20241022",
-      max_tokens: 1000,
-      messages,
-      tools: this.tools,
-      system: systemPrompt,
-    });
-
-    // Process response and handle tool calls
-    const finalText = [];
-    const toolResults = [];
-
-    for (const content of response.content) {
-      console.log("Content:", content);
-      if (content.type === "text") {
-        finalText.push(content.text);
-      } else if (content.type === "tool_use") {
-        // Execute tool call
-        const toolName = content.name;
-        const toolArgs = content.input as { [x: string]: unknown } | undefined;
-
-        const result = await this.mcp.callTool({
-          name: toolName,
-          arguments: toolArgs,
-        });
-        toolResults.push(result);
-        console.log(
-          `[Calling tool ${toolName} with args ${JSON.stringify(toolArgs)}]`
-        );
-
-        console.log("Results from tool:", toolName, "---->", result);
-
-        // Continue conversation with tool results
-        messages.push({
-          role: "user",
-          content: result.content as string,
-        });
-
-        // Get next response from Claude
-        const response = await this.anthropic.messages.create({
-          model: "claude-3-5-sonnet-20241022",
-          max_tokens: 1000,
-          messages,
-          system: systemPrompt,
-        });
-
-        finalText.push(
-          response.content[0].type === "text" ? response.content[0].text : ""
-        );
-      }
-    }
+    const finalResult = await this.getLlmResponse(userId, messages);
 
     const chat = [
       ...history.slice(-8), // keeping last 8 messages pair for context and make bot stateful
@@ -146,13 +173,12 @@ export default class MCPClient {
       },
       {
         role: "assistant",
-        content: finalText.join("\n"),
+        content: finalResult,
       },
     ];
-    console.log("Chat", chat);
     await updateConversationHistory(userId, chat);
 
-    return finalText.join("\n");
+    return finalResult;
   }
 
   async cleanup() {

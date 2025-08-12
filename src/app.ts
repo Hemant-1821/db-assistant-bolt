@@ -32,7 +32,6 @@ app.message(async (props: any) => {
     channel: message.channel,
     ts: result.ts,
   });
-  console.log("MCP response:", mcpMessage);
   await say(mcpMessage);
 });
 
