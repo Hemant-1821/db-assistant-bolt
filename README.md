@@ -2,8 +2,8 @@
 
 A Slack bot that allows users to query a MongoDB database using **natural language**, powered by the **Anthropic SDK** and built with **BoltJS**.
 
-## 🚀 Features (Phase 1)
-
+## 🚀 Features
+Phase 1
 - Accepts natural language instructions in Slack
 - Connects to a MongoDB database
 - Supports:
@@ -11,8 +11,14 @@ A Slack bot that allows users to query a MongoDB database using **natural langua
   - Filtering rows
   - Sorting by fields
 - Uses Anthropic Claude via SDK for language understanding
+
+Phase 2
+- New tools:
+  - Getting root level schema of a collection
+  - Perform left outer join of two collections using mongodb aggregation pipeline 
 - Allow users to **select DB** using /selectdb command
 - **stateful** bot — follow-up queries supported (e.g., “Now sort by price”)
+- Recursive prompting to execute tools consecutively and achieve final desired answer.
 
 ## 🧰 Tech Stack
 
@@ -20,14 +26,14 @@ A Slack bot that allows users to query a MongoDB database using **natural langua
 - 🧠 [Anthropic Claude SDK](https://docs.anthropic.com/)
 - 🗃️ MongoDB
 
-## 🎯 Upcoming Features
-
-- Add **join support** between collections
-- Use **Langchain** instead of anthropic library for handling tools and LLM connection  
+## 🎯 Upcoming Features (Phase 3)
+- System prompt structuring and detailed information about each tool.
+- Use **Langchain** instead of anthropic library for handling tools and LLM connection to gain more control over working.
 
 ## 📸 Demo
 
-https://www.loom.com/share/5ad57d56d3cc4ab4b019b657da02ea6f?sid=18a52682-d941-4873-b9e3-d91fa1d7810f
+Phase 1 - https://www.loom.com/share/5ad57d56d3cc4ab4b019b657da02ea6f?sid=18a52682-d941-4873-b9e3-d91fa1d7810f
+Phase 2 - 
 
 ## ⚙️ Setup
 
