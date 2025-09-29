@@ -1,16 +1,29 @@
-import MCPClient from "./mcp-client";
-import { selectDb } from "./mcp-server";
-const { App } = require("@slack/bolt");
+import QueryAgent from "./QueryAgent";
+
+const { App, ExpressReceiver } = require("@slack/bolt");
+const { MongoClient, ServerApiVersion } = require("mongodb");
 require("dotenv").config();
+
+const receiver = new ExpressReceiver({
+  signingSecret: process.env.SLACK_SIGNING_SECRET,
+});
 
 // Initializes your app with your bot token and signing secret
 const app = new App({
   token: process.env.SLACK_BOT_TOKEN,
   signingSecret: process.env.SLACK_SIGNING_SECRET,
+  receiver,
 });
 
-// MCP client initialization
-const mcpClient = new MCPClient();
+// MongoDB setup
+const uri = process.env.MONGODB_URI;
+const client = new MongoClient(uri, {
+  serverApi: {
+    version: ServerApiVersion.v1,
+    strict: true,
+    deprecationErrors: true,
+  },
+});
 
 app.message(async (props: any) => {
   const { message, say, client, context } = props;
@@ -26,13 +39,15 @@ app.message(async (props: any) => {
     text: "Thinking...",
     channel: message.channel,
   });
-  // Process the message with MCP client
-  const mcpMessage = await mcpClient.processQuery(message.text, context.userId);
+  // Process the message with langgraph
+  const response = await QueryAgent(message.text, context.userId);
   await client.chat.delete({
     channel: message.channel,
     ts: result.ts,
   });
-  await say(mcpMessage);
+  await say({
+    text: response,
+  });
 });
 
 app.command("/clearbotchat", async ({ command, ack, client, respond }: any) => {
@@ -87,7 +102,7 @@ app.command(
       );
     }
     try {
-      await selectDb(dbName, context.userId);
+      // await selectDb(dbName, context.userId);
       await respond("DB Selection successfully saved.");
       await client.conversations.setTopic({
         channel: channelId,
@@ -101,16 +116,26 @@ app.command(
   }
 );
 
+receiver.app.get("/check", async (req: any, res: any) => {
+  res.send(`server up and running!!`);
+});
+
 (async () => {
   try {
     // Start your bolt app
     await app.start(process.env.PORT || 3000);
     app.logger.info("⚡️ Bolt app is running!");
-    // Connect to mcp server
-    mcpClient.connectToServer("./dist/mcp-server.js");
+
+    // MongoDB client connection
+    await client.connect();
+    await client.db("admin").command({ ping: 1 });
+    console.log(
+      "Pinged your deployment. You successfully connected to MongoDB!"
+    );
   } catch (e) {
     app.logger.error(e);
-    await mcpClient.cleanup();
     process.exit(1);
   }
 })();
+
+export { client };

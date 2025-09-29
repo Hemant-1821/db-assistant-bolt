@@ -1,10 +1,3 @@
-import { dbKeywords } from "./constants";
-
-export function isDbRelatedMessage(msg: string): boolean {
-  const lower = msg.toLowerCase();
-  return dbKeywords.some((keyword) => lower.includes(keyword));
-}
-
 export function getSchemaStructure(document: any) {
   const struct: any = {};
   for (const [key, value] of Object.entries(document)) {
