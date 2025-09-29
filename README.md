@@ -1,6 +1,6 @@
 # 🧠 Natural Language Slack Bot for MongoDB
 
-A Slack bot that allows users to query a MongoDB database using **natural language**, powered by the **Anthropic SDK** and built with **BoltJS**.
+A Slack bot that allows users to query a MongoDB database using **natural language**, powered by the **Anthropic SDK**/**Langchain** and built with **BoltJS**.
 
 ## 🚀 Features
 Phase 1
@@ -10,7 +10,7 @@ Phase 1
   - Reading from collections
   - Filtering rows
   - Sorting by fields
-- Uses Anthropic Claude via SDK for language understanding
+- Uses Anthropic Claude via SDK for language understanding (code with anthropic sdk is available on anthropic-agent branch)
 
 Phase 2
 - New tools:
@@ -20,10 +20,15 @@ Phase 2
 - **stateful** bot — follow-up queries supported (e.g., “Now sort by price”)
 - Recursive prompting to execute tools consecutively and achieve final desired answer.
 
+Phase 3
+- Switched from Anthropic SDK → LangChain + LangGraph for tool orchestration and LLM communication.
+- Restructured the system prompt for clearer, more reliable instructions.
+
 ## 🧰 Tech Stack
 
 - ⚡️ [Slack BoltJS](https://slack.dev/bolt-js/) (Node.js)
-- 🧠 [Anthropic Claude SDK](https://docs.anthropic.com/)
+- 🧠 [Langchain](https://www.langchain.com/)
+- 🧠 [Anthropic Claude SDK](https://docs.anthropic.com/) (Available on anthropic-agent branch)
 - 🗃️ MongoDB
 
 ## 🎯 Upcoming Features (Phase 3)
@@ -33,7 +38,7 @@ Phase 2
 ## 📸 Demo
 
 Phase 1 - https://www.loom.com/share/5ad57d56d3cc4ab4b019b657da02ea6f?sid=18a52682-d941-4873-b9e3-d91fa1d7810f
-Phase 2 - 
+Phase 2 - <iframe src="https://www.linkedin.com/embed/feed/update/urn:li:ugcPost:7361248870963568640?compact=1" height="399" width="504" frameborder="0" allowfullscreen="" title="Embedded post"></iframe>
 
 ## ⚙️ Setup
 
